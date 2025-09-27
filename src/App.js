@@ -10,6 +10,12 @@ import StudentDashboard from './components/dashboard/StudentDashboard';
 import TeacherDashboard from './components/dashboard/TeacherDashboard';
 import AdminDashboard from './components/dashboard/AdminDashboard';
 import ProjectDetails from './components/ProjectDetails';
+import FYPRankings from './components/rankings/FYPRankings';
+import FYPSearch from './components/search/FYPSearch';
+import FYPRankingManagement from './components/teacher/FYPRankingManagement';
+import AIDashboard from './components/ai/AIDashboard';
+import ProjectRecommendations from './components/ai/ProjectRecommendations';
+import DataTest from './components/test/DataTest';
 import { USER_ROLES } from './utils/constants';
 
 // Enhanced Home component with professional styling and animations
@@ -220,15 +226,71 @@ function App() {
             />
             
             {/* Project Details Route - accessible to all authenticated users */}
-            <Route 
-              path="/project/:projectId" 
+            <Route
+              path="/project/:projectId"
               element={
                 <ProtectedRoute>
                   <Layout><ProjectDetails /></Layout>
                 </ProtectedRoute>
-              } 
+              }
             />
-            
+
+            {/* FYP Rankings and Search Routes - accessible to all authenticated users */}
+            <Route
+              path="/rankings"
+              element={
+                <ProtectedRoute>
+                  <Layout><FYPRankings /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/search"
+              element={
+                <ProtectedRoute>
+                  <Layout><FYPSearch /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Teacher FYP Management Route */}
+            <Route
+              path="/teacher/ranking-management"
+              element={
+                <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]}>
+                  <Layout><FYPRankingManagement /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* AI Dashboard and Recommendations Routes */}
+            <Route
+              path="/ai"
+              element={
+                <ProtectedRoute>
+                  <Layout><AIDashboard /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/ai/recommendations"
+              element={
+                <ProtectedRoute>
+                  <Layout><ProjectRecommendations numRecommendations={10} /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Test Route for debugging */}
+            <Route
+              path="/test-data"
+              element={
+                <Layout><DataTest /></Layout>
+              }
+            />
+
             {/* Fallback Routes */}
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

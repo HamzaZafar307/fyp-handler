@@ -22,7 +22,8 @@ import {
   ExternalLink,
   Award,
   Code,
-  FileText
+  FileText,
+  Brain
 } from 'lucide-react';
 
 const StudentDashboard = () => {

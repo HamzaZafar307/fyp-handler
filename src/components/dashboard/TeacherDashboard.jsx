@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  BookOpen, 
-  CheckCircle, 
-  AlertCircle, 
-  Calendar, 
-  FileText, 
+import {
+  Users,
+  BookOpen,
+  CheckCircle,
+  AlertCircle,
+  Calendar,
+  FileText,
   TrendingUp,
   Plus,
   Eye,
@@ -24,7 +24,8 @@ import {
   GraduationCap,
   Target,
   Lightbulb,
-  ChartBar
+  ChartBar,
+  Trophy
 } from 'lucide-react';
 
 const TeacherDashboard = () => {
@@ -487,17 +488,46 @@ const TeacherDashboard = () => {
                     </div>
                     <div className="p-6">
                       <div className="space-y-3">
-                        <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-blue-300 group">
-                          <FileText className="h-5 w-5 text-blue-500 mr-3 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-semibold text-gray-900">Review Submissions</span>
+                        <button
+                          onClick={() => navigate('/teacher/ranking-management')}
+                          className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 hover:border-blue-300 group hover:shadow-md"
+                        >
+                          <Trophy className="h-5 w-5 text-blue-500 mr-3 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300" />
+                          <div className="text-left">
+                            <span className="text-sm font-semibold text-gray-900 block">Manage Rankings</span>
+                            <span className="text-xs text-gray-600">Evaluate & rank projects</span>
+                          </div>
                         </button>
-                        <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-green-300 group">
-                          <Lightbulb className="h-5 w-5 text-green-500 mr-3 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-semibold text-gray-900">Suggest FYP Ideas</span>
+                        <button
+                          onClick={() => navigate('/rankings')}
+                          className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 hover:border-purple-300 group hover:shadow-md"
+                        >
+                          <BarChart3 className="h-5 w-5 text-purple-500 mr-3 group-hover:scale-110 transition-all duration-300" />
+                          <div className="text-left">
+                            <span className="text-sm font-semibold text-gray-900 block">View Department Rankings</span>
+                            <span className="text-xs text-gray-600">Compare across departments</span>
+                          </div>
                         </button>
-                        <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-purple-300 group">
-                          <Download className="h-5 w-5 text-purple-500 mr-3 group-hover:scale-110 transition-transform" />
-                          <span className="text-sm font-semibold text-gray-900">Generate Reports</span>
+                        <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all duration-200 hover:border-green-300 group hover:shadow-md">
+                          <FileText className="h-5 w-5 text-green-500 mr-3 group-hover:scale-110 transition-transform" />
+                          <div className="text-left">
+                            <span className="text-sm font-semibold text-gray-900 block">Review Submissions</span>
+                            <span className="text-xs text-gray-600">Check pending reviews</span>
+                          </div>
+                        </button>
+                        <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gradient-to-r hover:from-orange-50 hover:to-yellow-50 transition-all duration-200 hover:border-orange-300 group hover:shadow-md">
+                          <Lightbulb className="h-5 w-5 text-orange-500 mr-3 group-hover:scale-110 transition-transform" />
+                          <div className="text-left">
+                            <span className="text-sm font-semibold text-gray-900 block">Suggest FYP Ideas</span>
+                            <span className="text-xs text-gray-600">Create project proposals</span>
+                          </div>
+                        </button>
+                        <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 hover:border-indigo-300 group hover:shadow-md">
+                          <Download className="h-5 w-5 text-indigo-500 mr-3 group-hover:scale-110 transition-transform" />
+                          <div className="text-left">
+                            <span className="text-sm font-semibold text-gray-900 block">Generate Reports</span>
+                            <span className="text-xs text-gray-600">Export performance data</span>
+                          </div>
                         </button>
                       </div>
                     </div>
