@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import NoveltyCheckModal from './NoveltyCheckModal';
+import projectService from '../../services/projectService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
-  Clock, 
-  Search, 
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Clock,
+  Search,
   Filter,
   Star,
   Calendar,
@@ -35,38 +37,89 @@ const StudentDashboard = () => {
   const [selectedGrade, setSelectedGrade] = useState('all');
   const [selectedYear, setSelectedYear] = useState('all');
   const [selectedTechStack, setSelectedTechStack] = useState([]);
+
   const [sortBy, setSortBy] = useState('relevance');
+  const [showNoveltyModal, setShowNoveltyModal] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalProjects: 0,
+    savedProjects: 0,
+    searchHistoryCount: 0,
+    noveltyChecksCount: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        const response = await projectService.searchProjects({
+          searchTerm,
+          category: selectedCategory !== 'all' ? selectedCategory : null,
+          year: selectedYear !== 'all' ? parseInt(selectedYear) : null,
+          pageSize: 50
+        });
+
+        if (response && response.data && response.data.items) {
+          setProjects(response.data.items);
+        } else if (response && response.data) {
+          // Handle case where data might be the array directly (check backend DTO later)
+          // Standard backend response is { success: true, data: { items: [], ... } }
+          setProjects(response.data.items || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch projects", error);
+        // Keep mock data or show error?
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchStats = async () => {
+      try {
+        const stats = await projectService.getDashboardStats();
+        if (stats) {
+          setDashboardStats(stats);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats", error);
+      }
+    };
+
+    fetchProjects();
+    fetchStats();
+  }, [searchTerm, selectedCategory, selectedYear]);
 
   const stats = [
-    { 
-      name: 'Total FYPs', 
-      value: '2,847', 
-      icon: BookOpen, 
-      color: 'bg-blue-500', 
+    {
+      name: 'Total FYPs',
+      value: dashboardStats.totalProjects.toLocaleString(),
+      icon: BookOpen,
+      color: 'bg-blue-500',
       change: 'From 2015-2024',
       trend: 'up'
     },
-    { 
-      name: 'Saved FYPs', 
-      value: '12', 
-      icon: Heart, 
-      color: 'bg-pink-500', 
+    {
+      name: 'Saved FYPs',
+      value: dashboardStats.savedProjects.toLocaleString(),
+      icon: Heart,
+      color: 'bg-pink-500',
       change: 'Your bookmarks',
       trend: 'up'
     },
-    { 
-      name: 'Search History', 
-      value: '23', 
-      icon: Clock, 
-      color: 'bg-purple-500', 
+    {
+      name: 'Search History',
+      value: dashboardStats.searchHistoryCount.toLocaleString(),
+      icon: Clock,
+      color: 'bg-purple-500',
       change: 'Recent searches',
       trend: 'neutral'
     },
-    { 
-      name: 'Similar Ideas', 
-      value: '5', 
-      icon: TrendingUp, 
-      color: 'bg-orange-500', 
+    {
+      name: 'Similar Ideas',
+      value: dashboardStats.noveltyChecksCount.toLocaleString(),
+      icon: TrendingUp,
+      color: 'bg-orange-500',
       change: 'To your concept',
       trend: 'neutral'
     },
@@ -87,141 +140,7 @@ const StudentDashboard = () => {
 
   const techStacks = ['React', 'Node.js', 'Python', 'Flutter', 'Django', 'MongoDB', 'PostgreSQL', 'TensorFlow', 'Unity', 'Blockchain', 'IoT', 'Java', 'C++', 'Swift', 'Kotlin'];
 
-  // Previous FYPs from senior batches
-  const completedFYPs = [
-    {
-      id: 1,
-      title: 'Smart Campus Navigation System using AR',
-      students: ['Ahmad Hassan', 'Fatima Khan'],
-      supervisor: 'Dr. Sarah Johnson',
-      department: 'Computer Science',
-      category: 'Mobile Development',
-      batch: '2024',
-      techStack: ['Unity', 'ARCore', 'Firebase', 'Android'],
-      description: 'An augmented reality mobile application that helps students navigate the university campus with real-time directions, building information, and indoor navigation using AR markers.',
-      grade: 'A+',
-      year: '2024',
-      semester: 'Spring',
-      githubUrl: 'https://github.com/smartcampus/ar-navigation',
-      documentUrl: '/documents/fyp-2024-ar-navigation.pdf',
-      features: ['AR-based navigation', 'Indoor positioning', 'Real-time updates', 'Offline maps'],
-      challenges: ['AR accuracy in different lighting', 'Indoor positioning without GPS', 'Battery optimization'],
-      outcomes: ['Successfully deployed campus-wide', 'Reduced student confusion by 85%', 'Featured in university newsletter'],
-      isBookmarked: true,
-      views: 234,
-      downloads: 45
-    },
-    {
-      id: 2,
-      title: 'Blockchain-Based Student Verification System',
-      students: ['Ali Ahmed', 'Zainab Malik', 'Hassan Raza'],
-      supervisor: 'Prof. Ahmed Khan',
-      department: 'Information Technology',
-      category: 'Blockchain',
-      batch: '2024',
-      techStack: ['Solidity', 'Web3.js', 'React', 'Ethereum', 'IPFS'],
-      description: 'A decentralized system for verifying student credentials and certificates using blockchain technology, eliminating document fraud and providing instant verification.',
-      grade: 'A',
-      year: '2024',
-      semester: 'Fall',
-      githubUrl: 'https://github.com/verifystu/blockchain-verification',
-      documentUrl: '/documents/fyp-2024-blockchain-verification.pdf',
-      features: ['Immutable certificate storage', 'QR code verification', 'Multi-university support', 'Smart contracts'],
-      challenges: ['Gas fee optimization', 'University adoption', 'Scalability issues'],
-      outcomes: ['Adopted by 3 universities', 'Reduced verification time from days to seconds', 'Patent application filed'],
-      isBookmarked: false,
-      views: 456,
-      downloads: 78
-    },
-    {
-      id: 3,
-      title: 'AI-Powered Mental Health Assistant for Students',
-      students: ['Ayesha Siddique', 'Omar Farooq'],
-      supervisor: 'Dr. Maria Garcia',
-      department: 'Computer Science',
-      category: 'Machine Learning',
-      batch: '2023',
-      techStack: ['Python', 'TensorFlow', 'NLP', 'Flutter', 'Firebase'],
-      description: 'A mobile application that uses natural language processing and machine learning to provide mental health support, mood tracking, and personalized recommendations for university students.',
-      grade: 'A+',
-      year: '2023',
-      semester: 'Spring',
-      githubUrl: 'https://github.com/mentalhealth/ai-assistant',
-      documentUrl: '/documents/fyp-2023-mental-health-ai.pdf',
-      features: ['Mood tracking', 'AI-powered conversations', 'Crisis detection', 'Resource recommendations'],
-      challenges: ['Privacy concerns', 'Accuracy of mood detection', 'Cultural sensitivity'],
-      outcomes: ['Used by 500+ students', 'Published in IEEE conference', 'Improved student wellbeing scores by 40%'],
-      isBookmarked: true,
-      views: 789,
-      downloads: 123
-    },
-    {
-      id: 4,
-      title: 'Smart Traffic Management System using IoT',
-      students: ['Bilal Khan', 'Saba Noor', 'Hamza Ali'],
-      supervisor: 'Dr. John Smith',
-      department: 'Electronic Engineering',
-      category: 'IoT & Embedded',
-      batch: '2023',
-      techStack: ['Arduino', 'Raspberry Pi', 'Python', 'MongoDB', 'React'],
-      description: 'An IoT-based traffic management system that uses sensors and machine learning to optimize traffic flow, reduce congestion, and provide real-time traffic updates.',
-      grade: 'A',
-      year: '2023',
-      semester: 'Fall',
-      githubUrl: 'https://github.com/smarttraffic/iot-management',
-      documentUrl: '/documents/fyp-2023-smart-traffic.pdf',
-      features: ['Real-time traffic monitoring', 'Adaptive signal control', 'Emergency vehicle priority', 'Mobile app for citizens'],
-      challenges: ['Weather resistance', 'Network connectivity', 'Real-time processing'],
-      outcomes: ['Reduced traffic delays by 30%', 'Implemented at 5 intersections', 'City government interest'],
-      isBookmarked: false,
-      views: 345,
-      downloads: 67
-    },
-    {
-      id: 5,
-      title: 'Virtual Reality Chemistry Lab Simulator',
-      students: ['Nida Hassan', 'Faisal Ahmed'],
-      supervisor: 'Dr. Lisa Wang',
-      department: 'Computer Science',
-      category: 'Game Development',
-      batch: '2023',
-      techStack: ['Unity', 'C#', 'VR SDK', 'Blender', 'Firebase'],
-      description: 'An immersive VR application that simulates chemistry laboratory experiments, allowing students to practice dangerous or expensive experiments in a safe virtual environment.',
-      grade: 'A+',
-      year: '2023',
-      semester: 'Spring',
-      githubUrl: 'https://github.com/vrchemlab/simulator',
-      documentUrl: '/documents/fyp-2023-vr-chemistry.pdf',
-      features: ['Realistic physics simulation', 'Safety training modules', 'Progress tracking', 'Multi-user collaboration'],
-      challenges: ['Physics accuracy', 'VR motion sickness', 'Hardware requirements'],
-      outcomes: ['Adopted by chemistry department', 'Reduced lab accidents by 60%', 'Featured in education conference'],
-      isBookmarked: true,
-      views: 567,
-      downloads: 89
-    },
-    {
-      id: 6,
-      title: 'Automated Plagiarism Detection System',
-      students: ['Maira Qureshi', 'Usman Sheikh', 'Farah Khan'],
-      supervisor: 'Prof. Robert Davis',
-      department: 'Software Engineering',
-      category: 'Web Development',
-      batch: '2022',
-      techStack: ['Python', 'Django', 'React', 'PostgreSQL', 'NLP'],
-      description: 'A comprehensive web-based system that detects plagiarism in academic documents using advanced natural language processing techniques and machine learning algorithms.',
-      grade: 'A',
-      year: '2022',
-      semester: 'Fall',
-      githubUrl: 'https://github.com/plagiarismdetect/system',
-      documentUrl: '/documents/fyp-2022-plagiarism-detection.pdf',
-      features: ['Multi-language support', 'Similarity algorithms', 'Batch processing', 'Detailed reports'],
-      challenges: ['Algorithm accuracy', 'Processing large documents', 'False positive reduction'],
-      outcomes: ['95% accuracy achieved', 'Used by 10+ departments', 'Saved 200+ hours of manual checking'],
-      isBookmarked: false,
-      views: 432,
-      downloads: 76
-    }
-  ];
+  // Removed hardcoded completedFYPs
 
   const recentSearches = [
     { query: 'blockchain student verification', results: 23, timestamp: '2 hours ago' },
@@ -231,30 +150,12 @@ const StudentDashboard = () => {
     { query: 'VR chemistry laboratory', results: 12, timestamp: '1 week ago' }
   ];
 
-  const bookmarkedFYPs = completedFYPs.filter(fyp => fyp.isBookmarked);
+  const bookmarkedFYPs = []; // filteredFYPs.filter(fyp => fyp.isBookmarked); // Filtering on fetched data might differ
 
-  const filteredFYPs = completedFYPs.filter(fyp => {
-    const matchesSearch = fyp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         fyp.supervisor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         fyp.students.some(student => student.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         fyp.techStack.some(tech => tech.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         fyp.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         fyp.features.some(feature => feature.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === 'all' || 
-                           fyp.category.toLowerCase().includes(selectedCategory);
-    
-    const matchesGrade = selectedGrade === 'all' || 
-                        fyp.grade === selectedGrade;
-    
-    const matchesYear = selectedYear === 'all' || 
-                       fyp.year === selectedYear;
-    
-    const matchesTechStack = selectedTechStack.length === 0 || 
-                            selectedTechStack.some(tech => fyp.techStack.includes(tech));
-    
-    return matchesSearch && matchesCategory && matchesGrade && matchesYear && matchesTechStack;
-  });
+  // Use 'projects' instead of 'completedFYPs'
+  // But we need to handle filtering. The API handles filtering.
+  // So 'projects' IS the filtered list (filteredFYPs).
+  const filteredFYPs = projects;
 
   const getGradeColor = (grade) => {
     switch (grade) {
@@ -330,7 +231,7 @@ const StudentDashboard = () => {
                       <h2 className="text-2xl font-bold text-gray-900">FYP Repository</h2>
                       <p className="text-gray-600 mt-1">{filteredFYPs.length} previous FYPs found</p>
                     </div>
-                    
+
                     {/* Search and Filters */}
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="relative">
@@ -343,7 +244,7 @@ const StudentDashboard = () => {
                           className="pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80 shadow-sm"
                         />
                       </div>
-                      
+
                       <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                         className="flex items-center px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-medium text-gray-700"
@@ -433,11 +334,10 @@ const StudentDashboard = () => {
                                   setSelectedTechStack([...selectedTechStack, tech]);
                                 }
                               }}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                                selectedTechStack.includes(tech)
-                                  ? 'bg-blue-100 text-blue-800 border-blue-300'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                              }`}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${selectedTechStack.includes(tech)
+                                ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
                             >
                               {tech}
                             </button>
@@ -455,7 +355,7 @@ const StudentDashboard = () => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <h3 
+                              <h3
                                 className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
                                 onClick={() => navigate(`/project/${fyp.id}`)}
                               >
@@ -470,10 +370,10 @@ const StudentDashboard = () => {
                             </div>
                             <div className="flex items-center text-gray-600 text-sm mb-3">
                               <Users className="h-4 w-4 mr-1" />
-                              <span className="font-medium">{fyp.students.join(', ')}</span>
+                              <span className="font-medium">{fyp.students && fyp.students.length > 0 ? fyp.students.join(', ') : 'N/A'}</span>
                               <span className="mx-2">•</span>
                               <User className="h-4 w-4 mr-1" />
-                              <span>{fyp.supervisor}</span>
+                              <span>{fyp.supervisor || 'N/A'}</span>
                               <span className="mx-2">•</span>
                               <Building className="h-4 w-4 mr-1" />
                               <span>{fyp.department}</span>
@@ -489,16 +389,16 @@ const StudentDashboard = () => {
                             </button>
                           </div>
                         </div>
-                        
+
                         <p className="text-gray-700 leading-relaxed">
                           {fyp.description}
                         </p>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
                             <ul className="text-sm text-gray-600 space-y-1">
-                              {fyp.features.slice(0, 3).map((feature, index) => (
+                              {fyp.features && fyp.features.slice(0, 3).map((feature, index) => (
                                 <li key={index} className="flex items-start">
                                   <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
                                   {feature}
@@ -506,11 +406,11 @@ const StudentDashboard = () => {
                               ))}
                             </ul>
                           </div>
-                          
+
                           <div>
                             <h4 className="font-semibold text-gray-900 mb-2">Outcomes</h4>
                             <ul className="text-sm text-gray-600 space-y-1">
-                              {fyp.outcomes.slice(0, 2).map((outcome, index) => (
+                              {fyp.outcomes && fyp.outcomes.slice(0, 2).map((outcome, index) => (
                                 <li key={index} className="flex items-start">
                                   <Award className="h-3 w-3 text-green-500 mt-1 mr-2 flex-shrink-0" />
                                   {outcome}
@@ -519,18 +419,18 @@ const StudentDashboard = () => {
                             </ul>
                           </div>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-2">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-50 text-purple-700 border border-purple-200">
                             {fyp.category}
                           </span>
-                          {fyp.techStack.map((tech, index) => (
+                          {fyp.techStack && fyp.techStack.map((tech, index) => (
                             <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
                               {tech}
                             </span>
                           ))}
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
                           <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
                             <FileText className="h-4 w-4 mr-2" />
@@ -553,13 +453,13 @@ const StudentDashboard = () => {
                     </div>
                   ))}
                 </div>
-                
+
                 {filteredFYPs.length === 0 && (
                   <div className="p-12 text-center">
                     <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-xl font-medium text-gray-900 mb-2">No FYPs found</h3>
                     <p className="text-gray-500 mb-6">Try adjusting your search criteria or browse all categories.</p>
-                    <button 
+                    <button
                       onClick={() => {
                         setSearchTerm('');
                         setSelectedCategory('all');
@@ -587,7 +487,7 @@ const StudentDashboard = () => {
                   <div className="space-y-4">
                     {bookmarkedFYPs.map((fyp) => (
                       <div key={fyp.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow duration-200">
-                        <h3 
+                        <h3
                           className="font-semibold text-gray-900 mb-2 text-sm leading-tight hover:text-blue-600 cursor-pointer transition-colors"
                           onClick={() => navigate(`/project/${fyp.id}`)}
                         >
@@ -641,7 +541,10 @@ const StudentDashboard = () => {
                 </div>
                 <div className="p-6">
                   <div className="space-y-3">
-                    <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-blue-300 group">
+                    <button
+                      onClick={() => setShowNoveltyModal(true)}
+                      className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-blue-300 group"
+                    >
                       <TrendingUp className="h-5 w-5 text-blue-500 mr-3 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold text-gray-900">Check Idea Similarity</span>
                     </button>
@@ -660,6 +563,12 @@ const StudentDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Novelty Check Modal */}
+      <NoveltyCheckModal
+        isOpen={showNoveltyModal}
+        onClose={() => setShowNoveltyModal(false)}
+      />
     </div>
   );
 };

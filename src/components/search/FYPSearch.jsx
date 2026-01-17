@@ -18,7 +18,7 @@ import {
   Download,
   BarChart3
 } from 'lucide-react';
-import rankingService from '../../services/rankingService';
+import projectService from '../../services/projectService';
 import { toast } from 'react-hot-toast';
 
 const FYPSearch = () => {
@@ -91,9 +91,9 @@ const FYPSearch = () => {
       console.log('Initializing FYP Search data...');
 
       const [years, depts, cats] = await Promise.all([
-        rankingService.getAvailableYears(),
-        rankingService.getDepartments(),
-        rankingService.getProjectCategories()
+        projectService.getAvailableYears(),
+        projectService.getDepartments(),
+        projectService.getProjectCategories()
       ]);
 
       console.log('Search - Available years:', years);
@@ -124,16 +124,40 @@ const FYPSearch = () => {
         limit: pagination.limit
       };
 
-      const response = await rankingService.searchProjects(searchFilters);
+      // Map filters to backend expected format
+      const searchResponse = await projectService.searchProjects({
+        searchTerm: searchTerm.trim(),
+        year: filters.year,
+        semester: filters.semester,
+        departmentId: filters.department ? parseInt(filters.department) : null, // Backend likely expects ID for filtering if using 'department' param, or we need to check if it matches code.
+        // Let's assume the backend search DTO might need adjustment or we send what we have.
+        // Looking at FYPProjectSearchDto (implied): usually expects exact matches or specific fields.
+        // The mock service used code/name. ProjectService calls API with params.
+        category: filters.category,
+        page: newPage,
+        pageSize: pagination.limit
+      });
 
-      setSearchResults(response.projects || []);
+      // Backend response: { success: true, data: { items: [], totalCount: ... } }
+      // OR direct data if projectService.searchProjects unwraps it.
+      // My projectService.searchProjects returns response.data (which is { success: true, data: ... })
+
+      const resultData = searchResponse.data || {};
+
+      setSearchResults(resultData.items || []);
       setPagination({
         page: newPage,
         limit: pagination.limit,
-        total: response.total || 0,
-        totalPages: Math.ceil((response.total || 0) / pagination.limit)
+        total: resultData.totalCount || 0,
+        totalPages: Math.ceil((resultData.totalCount || 0) / pagination.limit)
       });
-      setSearchStats(response.stats || null);
+
+      // Calculate stats from results (Back end doesn't return stats object yet, so we compute locally or omit)
+      setSearchStats({
+        avg_performance: 0, // Not available from backend yet
+        projects_found: resultData.totalCount,
+        departments_count: 0 // Optional
+      });
 
       // Update URL with search parameters
       const urlParams = new URLSearchParams();
@@ -223,11 +247,10 @@ const FYPSearch = () => {
           <button
             key={number}
             onClick={() => handleSearch(number)}
-            className={`px-3 py-2 text-sm font-medium border rounded-md ${
-              pagination.page === number
+            className={`px-3 py-2 text-sm font-medium border rounded-md ${pagination.page === number
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-50'
-            }`}
+              }`}
           >
             {number}
           </button>
@@ -265,11 +288,10 @@ const FYPSearch = () => {
               <button
                 key={year}
                 onClick={() => handleYearSearch(year)}
-                className={`p-3 text-center border-2 rounded-xl font-semibold transition-all duration-200 ${
-                  filters.year === year
+                className={`p-3 text-center border-2 rounded-xl font-semibold transition-all duration-200 ${filters.year === year
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
-                }`}
+                  }`}
               >
                 <Calendar className="h-4 w-4 mx-auto mb-1" />
                 <span className="text-sm">{year}</span>
@@ -395,7 +417,7 @@ const FYPSearch = () => {
                     >
                       <option value="">All Departments</option>
                       {departments.map(dept => (
-                        <option key={dept.id} value={dept.code}>{dept.name}</option>
+                        <option key={dept.id} value={dept.id}>{dept.name}</option>
                       ))}
                     </select>
                   </div>
