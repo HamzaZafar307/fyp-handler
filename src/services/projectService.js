@@ -2,11 +2,11 @@ import api from './api';
 
 const projectService = {
     /**
-     * Search projects with filters
+     * Get projects with filters (formerly searchProjects)
      * @param {Object} filters - { searchTerm, category, year, page, pageSize }
      * @returns {Promise<Object>} - { data: [], totalCount: 0 }
      */
-    searchProjects: async (filters = {}) => {
+    getProjects: async (filters = {}) => {
         try {
             // Map frontend filters to Backend DTO
             const apiParams = {
@@ -23,6 +23,13 @@ const projectService = {
             console.error('Error searching projects:', error);
             throw error;
         }
+    },
+
+    /**
+     * Search projects (alias for getProjects for backward compatibility)
+     */
+    searchProjects: async (filters = {}) => {
+        return projectService.getProjects(filters);
     },
 
     /**
@@ -70,10 +77,52 @@ const projectService = {
      */
     getDepartments: async () => {
         try {
-            const response = await api.get('/department');
+            console.log('Fetching departments from /Department...');
+            const response = await api.get('/Department');
+            console.log('Departments API full response:', response.data);
             return response.data.data;
         } catch (error) {
             console.error('Error fetching departments:', error);
+            return [];
+        }
+    },
+
+    getSearchHistory: async () => {
+        try {
+            const response = await api.get('/projects/search-history');
+            return response.data.data;
+        } catch (error) {
+            console.error('Error fetching search history:', error);
+            return [];
+        }
+    },
+
+    saveSearchHistory: async (query, resultsCount) => {
+        try {
+            await api.post('/projects/search-history', { query, resultsCount });
+            return true;
+        } catch (error) {
+            console.error('Error saving search history:', error);
+            return false;
+        }
+    },
+
+    clearSearchHistory: async () => {
+        try {
+            await api.delete('/projects/search-history');
+            return true;
+        } catch (error) {
+            console.error('Error clearing search history:', error);
+            return false;
+        }
+    },
+
+    getSupervisors: async () => {
+        try {
+            const response = await api.get('/projects/supervisors');
+            return response.data.data;
+        } catch (error) {
+            console.error('Error fetching supervisors:', error);
             return [];
         }
     },
@@ -87,6 +136,47 @@ const projectService = {
             return response.data.data;
         } catch (error) {
             console.error('Error fetching stats:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Create a new project
+     * @param {Object} projectData 
+     */
+    createProject: async (projectData) => {
+        try {
+            const response = await api.post('/projects', projectData);
+            return response.data;
+        } catch (error) {
+            console.error('Error creating project:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get projects by teacher ID
+     * @param {number} teacherId 
+     */
+    getProjectsByTeacher: async (teacherId) => {
+        try {
+            const response = await api.get(`/projects/teacher/${teacherId}`);
+            return response.data.data;
+        } catch (error) {
+            console.error('Error fetching teacher projects:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get pending projects for approval
+     */
+    getPendingProjects: async () => {
+        try {
+            const response = await api.get('/projects/search', { params: { Status: 'Proposed' } });
+            return response.data.data.items;
+        } catch (error) {
+            console.error('Error fetching pending projects:', error);
             throw error;
         }
     }

@@ -225,5 +225,18 @@ export const authService = {
   hasAnyRole: (requiredRoles) => {
     const user = authService.getStoredUser();
     return requiredRoles.includes(user?.role);
+  },
+
+  /**
+   * Admin adds a new user without logging in as them
+   */
+  adminAddUser: async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error in adminAddUser:', error);
+      throw error;
+    }
   }
 };

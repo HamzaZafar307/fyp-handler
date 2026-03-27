@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import NoveltyCheckModal from './NoveltyCheckModal';
+import SupervisorsModal from './SupervisorsModal';
 import projectService from '../../services/projectService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -40,36 +41,53 @@ const StudentDashboard = () => {
 
   const [sortBy, setSortBy] = useState('relevance');
   const [showNoveltyModal, setShowNoveltyModal] = useState(false);
+  const [showSupervisorsModal, setShowSupervisorsModal] = useState(false);
   const [projects, setProjects] = useState([]);
+  const [recentSearches, setRecentSearches] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({
     totalProjects: 0,
     savedProjects: 0,
+    activeProjects: 0,
     searchHistoryCount: 0,
     noveltyChecksCount: 0
   });
+
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
-        const response = await projectService.searchProjects({
-          searchTerm,
-          category: selectedCategory !== 'all' ? selectedCategory : null,
-          year: selectedYear !== 'all' ? parseInt(selectedYear) : null,
-          pageSize: 50
+        // Only fetch and save if we have a debounced term or if it's the initial load
+        const response = await projectService.getProjects({
+          title: debouncedSearchTerm,
+          category: selectedCategory === 'all' ? '' : categories.find(c => c.id === selectedCategory)?.name,
+          year: selectedYear === 'all' ? null : parseInt(selectedYear),
+          pageSize: 10
         });
 
         if (response && response.data && response.data.items) {
           setProjects(response.data.items);
+          // Save search to history if there's a search term and it's not the same as before
+          if (debouncedSearchTerm.trim() && debouncedSearchTerm.length > 2) {
+            projectService.saveSearchHistory(debouncedSearchTerm.trim(), response.data.items.length);
+            fetchSearchHistory();
+          }
         } else if (response && response.data) {
-          // Handle case where data might be the array directly (check backend DTO later)
-          // Standard backend response is { success: true, data: { items: [], ... } }
           setProjects(response.data.items || []);
         }
       } catch (error) {
         console.error("Failed to fetch projects", error);
-        // Keep mock data or show error?
       } finally {
         setLoading(false);
       }
@@ -86,9 +104,21 @@ const StudentDashboard = () => {
       }
     };
 
+    const fetchSearchHistory = async () => {
+      try {
+        const history = await projectService.getSearchHistory();
+        if (history) {
+          setRecentSearches(history);
+        }
+      } catch (error) {
+        console.error("Failed to fetch search history", error);
+      }
+    };
+
     fetchProjects();
     fetchStats();
-  }, [searchTerm, selectedCategory, selectedYear]);
+    fetchSearchHistory();
+  }, [debouncedSearchTerm, selectedCategory, selectedYear]);
 
   const stats = [
     {
@@ -142,13 +172,26 @@ const StudentDashboard = () => {
 
   // Removed hardcoded completedFYPs
 
-  const recentSearches = [
-    { query: 'blockchain student verification', results: 23, timestamp: '2 hours ago' },
-    { query: 'AI mental health chatbot', results: 15, timestamp: '1 day ago' },
-    { query: 'IoT smart traffic system', results: 31, timestamp: '2 days ago' },
-    { query: 'AR navigation campus', results: 8, timestamp: '3 days ago' },
-    { query: 'VR chemistry laboratory', results: 12, timestamp: '1 week ago' }
-  ];
+  const handleClearHistory = async () => {
+    try {
+      await projectService.clearSearchHistory();
+      setRecentSearches([]);
+      setDashboardStats(prev => ({ ...prev, searchHistoryCount: 0 }));
+    } catch (error) {
+      console.error("Failed to clear history", error);
+    }
+  };
+
+  const getTimeAgo = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  };
 
   const bookmarkedFYPs = []; // filteredFYPs.filter(fyp => fyp.isBookmarked); // Filtering on fetched data might differ
 
@@ -518,16 +561,23 @@ const StudentDashboard = () => {
                 </div>
                 <div className="p-6">
                   <div className="space-y-3">
-                    {recentSearches.map((search, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
+                    {recentSearches.map((search) => (
+                      <div 
+                        key={search.id} 
+                        className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                        onClick={() => setSearchTerm(search.query)}
+                      >
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">{search.query}</p>
-                          <p className="text-xs text-gray-500">{search.results} results • {search.timestamp}</p>
+                          <p className="text-xs text-gray-500">{search.resultsCount} results • {getTimeAgo(search.timestamp)}</p>
                         </div>
                         <Search className="h-4 w-4 text-gray-400" />
                       </div>
                     ))}
-                    <button className="w-full text-center py-3 text-blue-600 hover:text-blue-800 text-sm font-semibold hover:bg-blue-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={handleClearHistory}
+                      className="w-full text-center py-3 text-blue-600 hover:text-blue-800 text-sm font-semibold hover:bg-blue-50 rounded-lg transition-colors"
+                    >
                       Clear Search History →
                     </button>
                   </div>
@@ -548,7 +598,10 @@ const StudentDashboard = () => {
                       <TrendingUp className="h-5 w-5 text-blue-500 mr-3 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold text-gray-900">Check Idea Similarity</span>
                     </button>
-                    <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-green-300 group">
+                    <button 
+                      onClick={() => setShowSupervisorsModal(true)}
+                      className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-green-300 group"
+                    >
                       <Users className="h-5 w-5 text-green-500 mr-3 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold text-gray-900">Find Supervisors</span>
                     </button>
@@ -564,10 +617,15 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      {/* Novelty Check Modal */}
       <NoveltyCheckModal
         isOpen={showNoveltyModal}
         onClose={() => setShowNoveltyModal(false)}
+      />
+
+      {/* Supervisors Modal */}
+      <SupervisorsModal
+        isOpen={showSupervisorsModal}
+        onClose={() => setShowSupervisorsModal(false)}
       />
     </div>
   );

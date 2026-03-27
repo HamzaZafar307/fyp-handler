@@ -31,10 +31,14 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData);
+      console.log('Attempting login for:', formData.email);
+      const response = await login(formData);
+      console.log('Login response:', response);
       toast.success('Login successful!');
+      console.log('Navigating to:', from);
       navigate(from, { replace: true });
     } catch (error) {
+      console.error('Login error:', error);
       toast.error(error.message || 'Login failed');
     } finally {
       setLoading(false);
@@ -139,11 +143,15 @@ const Login = () => {
             <GoogleLogin
               onSuccess={async (credentialResponse) => {
                 try {
+                  console.log('Google login success, payload received');
                   setLoading(true);
-                  await googleLogin(credentialResponse.credential);
+                  const response = await googleLogin(credentialResponse.credential);
+                  console.log('Google login response:', response);
                   toast.success('Google Login successful!');
+                  console.log('Navigating to:', from);
                   navigate(from, { replace: true });
                 } catch (error) {
+                  console.error('Google login error:', error);
                   toast.error(error.message || 'Google Login failed');
                 } finally {
                   setLoading(false);
@@ -155,7 +163,7 @@ const Login = () => {
               useOneTap
               theme="outline"
               size="large"
-              width="100%"
+              width="350"
             />
           </div>
 

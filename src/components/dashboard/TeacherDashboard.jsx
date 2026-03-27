@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import projectService from '../../services/projectService';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -33,131 +34,138 @@ const TeacherDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  
+  console.log('TeacherDashboard rendering, user:', user?.email, 'role:', user?.role);
 
-  const stats = [
-    { 
-      name: 'Supervised FYPs', 
-      value: '45', 
-      icon: BookOpen, 
-      color: 'bg-blue-500', 
-      change: '+8 this year',
-      trend: 'up'
-    },
-    { 
-      name: 'Active Students', 
-      value: '72', 
-      icon: Users, 
-      color: 'bg-green-500', 
-      change: '24 teams total',
-      trend: 'up'
-    },
-    { 
-      name: 'Completed FYPs', 
-      value: '156', 
-      icon: CheckCircle, 
-      color: 'bg-purple-500', 
-      change: 'Since 2018',
-      trend: 'up'
-    },
-    { 
-      name: 'Success Rate', 
-      value: '94%', 
-      icon: TrendingUp, 
-      color: 'bg-orange-500', 
-      change: 'A grade or above',
-      trend: 'up'
-    },
-  ];
+  // Form state for creating project
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'Web Development',
+    description: '',
+    year: new Date().getFullYear(),
+    semester: 'Spring',
+    departmentId: '',
+    difficultyLevel: 'Intermediate'
+  });
 
-  const currentFYPs = [
-    {
-      id: 1,
-      title: 'Smart Campus Energy Management System',
-      students: ['Ahmed Ali', 'Sara Khan', 'Hassan Malik'],
-      status: 'In Progress',
-      progress: 75,
-      lastUpdate: '2025-01-20',
-      category: 'IoT & Smart Systems',
-      nextMeeting: '2025-01-25',
-      semester: 'Spring 2025',
-      challenges: ['Hardware integration delays', 'Data visualization complexity'],
-      recentSubmissions: ['Literature Review', 'System Architecture'],
-      grade: 'A-',
-      expectedGrade: 'A',
-      riskLevel: 'low'
-    },
-    {
-      id: 2,
-      title: 'AI-Powered Fake News Detection',
-      students: ['Fatima Ahmed', 'Usman Sheikh'],
-      status: 'Review Required',
-      progress: 85,
-      lastUpdate: '2025-01-22',
-      category: 'Machine Learning',
-      nextMeeting: '2025-01-24',
-      semester: 'Spring 2025',
-      challenges: ['Model accuracy improvement needed', 'Dataset bias issues'],
-      recentSubmissions: ['ML Model Implementation', 'Testing Results'],
-      grade: 'A',
-      expectedGrade: 'A+',
-      riskLevel: 'medium'
-    },
-    {
-      id: 3,
-      title: 'Blockchain-based Supply Chain Tracking',
-      students: ['Ali Hassan', 'Zara Noor', 'Omar Farooq'],
-      status: 'Planning',
-      progress: 45,
-      lastUpdate: '2025-01-18',
-      category: 'Blockchain',
-      nextMeeting: '2025-01-26',
-      semester: 'Spring 2025',
-      challenges: ['Smart contract complexity', 'Industry partnership needed'],
-      recentSubmissions: ['Project Proposal', 'Technical Specifications'],
-      grade: 'B+',
-      expectedGrade: 'A-',
-      riskLevel: 'high'
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('TeacherDashboard: fetchData starting...');
+        setLoading(true);
+        console.log('TeacherDashboard: Calling projectService.getDepartments()...');
+        const [projectsData, statsData, deptsData] = await Promise.all([
+          projectService.getProjectsByTeacher(user.id),
+          projectService.getDashboardStats(),
+          projectService.getDepartments()
+        ]);
+
+        setProjects(projectsData || []);
+        setDashboardStats(statsData);
+        setDepartments(deptsData || []);
+        
+        if (deptsData && deptsData.length > 0) {
+          setFormData(prev => ({ ...prev, departmentId: deptsData[0].id }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+        setError("Could not load dashboard data. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user?.id) {
+      fetchData();
     }
-  ];
+  }, [user?.id]);
 
-  const completedFYPs = [
-    {
-      id: 1,
-      title: 'AR Navigation System for Campus',
-      students: ['Ahmad Hassan', 'Fatima Khan'],
-      year: '2024',
-      semester: 'Spring',
-      finalGrade: 'A+',
-      category: 'Mobile Development',
-      outcome: 'Successfully deployed university-wide',
-      citations: 12,
-      impact: 'High'
-    },
-    {
-      id: 2,
-      title: 'Mental Health AI Assistant',
-      students: ['Ayesha Siddique', 'Omar Farooq'],
-      year: '2023',
-      semester: 'Spring',
-      finalGrade: 'A+',
-      category: 'Machine Learning',
-      outcome: 'Published in IEEE conference, 500+ active users',
-      citations: 8,
-      impact: 'High'
-    },
-    {
-      id: 3,
-      title: 'Smart Traffic Management IoT',
-      students: ['Bilal Khan', 'Saba Noor', 'Hamza Ali'],
-      year: '2023',
-      semester: 'Fall',
-      finalGrade: 'A',
-      category: 'IoT & Embedded',
-      outcome: 'Implemented at 5 city intersections',
-      citations: 5,
-      impact: 'Medium'
+  const handleProposeFYP = async () => {
+    try {
+      const payload = {
+        ...formData,
+        supervisorId: user.id,
+        studentIds: [] // Currently creating project without students, can be assigned later
+      };
+
+      await projectService.createProject(payload);
+      setShowCreateModal(false);
+      
+      // Refresh projects list
+      const updatedProjects = await projectService.getProjectsByTeacher(user.id);
+      setProjects(updatedProjects || []);
+      
+      // Reset form
+      setFormData({
+        title: '',
+        category: 'Web Development',
+        description: '',
+        year: new Date().getFullYear(),
+        semester: 'Spring',
+        departmentId: departments[0]?.id || '',
+        difficultyLevel: 'Intermediate'
+      });
+    } catch (err) {
+      console.error("Failed to propose FYP", err);
+      alert("Failed to propose FYP. Please check all fields.");
     }
-  ];
+  };
+
+  const getStats = () => {
+    const supervisedCount = projects.length;
+    const activeProjects = projects.filter(p => p.status === 'InProgress' || p.status === 'Proposed').length;
+    const completedCount = projects.filter(p => p.status === 'Completed').length;
+    
+    // Calculate a simple success rate based on completed projects vs total assigned
+    const successRate = projects.length > 0 
+      ? Math.round((completedCount / projects.length) * 100) 
+      : 0;
+
+    return [
+      { 
+        name: 'Supervised FYPs', 
+        value: supervisedCount.toString(), 
+        icon: BookOpen, 
+        color: 'bg-blue-500', 
+        change: 'Total assigned',
+        trend: 'up'
+      },
+      { 
+        name: 'Active Projects', 
+        value: activeProjects.toString(), 
+        icon: Activity, 
+        color: 'bg-green-500', 
+        change: 'Current workload',
+        trend: 'up'
+      },
+      { 
+        name: 'Completed FYPs', 
+        value: completedCount.toString(), 
+        icon: CheckCircle, 
+        color: 'bg-purple-500', 
+        change: 'Total history',
+        trend: 'up'
+      },
+      { 
+        name: 'Success Rate', 
+        value: `${successRate}%`, 
+        icon: TrendingUp, 
+        color: 'bg-orange-500', 
+        change: 'A grade or above',
+        trend: 'up'
+      },
+    ];
+  };
+
+  const stats = getStats();
+  
+  const currentFYPs = projects.filter(p => p.status !== 'Completed');
+  const completedFYPs = projects.filter(p => p.status === 'Completed');
 
   const upcomingMeetings = [
     {
@@ -221,9 +229,9 @@ const TeacherDashboard = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'In Progress': return 'bg-blue-100 text-blue-800';
-      case 'Review Required': return 'bg-orange-100 text-orange-800';
-      case 'Planning': return 'bg-yellow-100 text-yellow-800';
+      case 'InProgress': return 'bg-blue-100 text-blue-800';
+      case 'ReviewRequired': return 'bg-orange-100 text-orange-800';
+      case 'Proposed': return 'bg-yellow-100 text-yellow-800';
       case 'Completed': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -239,6 +247,7 @@ const TeacherDashboard = () => {
   };
 
   const getGradeColor = (grade) => {
+    if (!grade) return 'bg-gray-100 text-gray-800';
     if (grade.startsWith('A')) return 'bg-green-100 text-green-800';
     if (grade.startsWith('B')) return 'bg-blue-100 text-blue-800';
     if (grade.startsWith('C')) return 'bg-yellow-100 text-yellow-800';
@@ -363,42 +372,42 @@ const TeacherDashboard = () => {
                               </h3>
                               <div className="flex items-center text-sm text-gray-600 mb-2">
                                 <Users className="h-4 w-4 mr-1" />
-                                <span>{project.students.join(', ')}</span>
+                                <span>{project.projectMembers?.map(m => m.userName).join(', ') || 'No students assigned'}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
                                 {project.status}
                               </span>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRiskColor(project.riskLevel)}`}>
-                                {project.riskLevel} risk
-                              </span>
+                              {project.difficultyLevel && (
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800`}>
+                                  {project.difficultyLevel}
+                                </span>
+                              )}
                             </div>
                           </div>
                           
                           <div className="mb-4">
                             <div className="flex justify-between text-sm text-gray-600 mb-1">
-                              <span>Progress</span>
-                              <span>{project.progress}%</span>
+                              <span>Overall Rank</span>
+                              <span>{project.overallRank || 'N/A'}</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div 
                                 className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                style={{ width: `${project.progress}%` }}
+                                style={{ width: `${project.performanceScore || 0}%` }}
                               ></div>
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>Next meeting: {project.nextMeeting}</span>
+                            <span>Year: {project.year} | Semester: {project.semester}</span>
                             <div className="flex items-center gap-2">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${getGradeColor(project.grade)}`}>
-                                Current: {project.grade}
-                              </span>
-                              <span className="text-gray-400">→</span>
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${getGradeColor(project.expectedGrade)}`}>
-                                Expected: {project.expectedGrade}
-                              </span>
+                              {project.finalGrade && (
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${getGradeColor(project.finalGrade)}`}>
+                                  Grade: {project.finalGrade}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -559,9 +568,9 @@ const TeacherDashboard = () => {
                 <div className="divide-y divide-gray-100">
                   {currentFYPs.map((project) => (
                     <div key={project.id} className="p-8 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
+                          <div className="flex items-center gap-3 mb-2">
                             <h3 
                               className="text-xl font-bold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
                               onClick={() => navigate(`/project/${project.id}`)}
@@ -571,17 +580,14 @@ const TeacherDashboard = () => {
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(project.status)}`}>
                               {project.status}
                             </span>
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(project.riskLevel)}`}>
-                              {project.riskLevel} risk
-                            </span>
                           </div>
                           <div className="flex items-center text-gray-600 text-sm mb-4">
                             <Users className="h-4 w-4 mr-2" />
                             <span className="font-medium">Team:</span>
-                            <span className="ml-1">{project.students.join(', ')}</span>
+                            <span className="ml-1">{project.projectMembers?.map(m => m.userName).join(', ') || 'No students'}</span>
                             <span className="mx-3">•</span>
                             <GraduationCap className="h-4 w-4 mr-1" />
-                            <span>{project.semester}</span>
+                            <span>{project.semester} {project.year}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -591,74 +597,41 @@ const TeacherDashboard = () => {
                           <button className="p-2 text-gray-400 hover:text-green-500 transition-colors">
                             <Edit className="h-5 w-5" />
                           </button>
-                          <button className="p-2 text-gray-400 hover:text-purple-500 transition-colors">
-                            <MessageSquare className="h-5 w-5" />
-                          </button>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
-                          <div className="text-sm text-gray-600 mb-2">Progress</div>
+                          <div className="text-sm text-gray-600 mb-2">Performance Score</div>
                           <div className="flex items-center">
                             <div className="flex-1 mr-3">
                               <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div 
                                   className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                  style={{ width: `${project.progress}%` }}
+                                  style={{ width: `${project.performanceScore || 0}%` }}
                                 ></div>
                               </div>
                             </div>
-                            <span className="text-sm font-medium text-gray-900">{project.progress}%</span>
+                            <span className="text-sm font-medium text-gray-900">{project.performanceScore || 0}%</span>
                           </div>
                         </div>
                         <div>
-                          <div className="text-sm text-gray-600 mb-2">Current Grade</div>
+                          <div className="text-sm text-gray-600 mb-2">Final Grade</div>
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded text-sm font-medium ${getGradeColor(project.grade)}`}>
-                              {project.grade}
+                            <span className={`px-2 py-1 rounded text-sm font-medium ${getGradeColor(project.finalGrade || '')}`}>
+                              {project.finalGrade || 'N/A'}
                             </span>
-                            <span className="text-gray-400">→</span>
-                            <span className={`px-2 py-1 rounded text-sm font-medium ${getGradeColor(project.expectedGrade)}`}>
-                              {project.expectedGrade}
-                            </span>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600 mb-2">Next Meeting</div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {project.nextMeeting}
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                        <div>
-                          <div className="text-sm text-gray-600 mb-2">Recent Submissions</div>
-                          <div className="space-y-1">
-                            {project.recentSubmissions.map((submission, i) => (
-                              <div key={i} className="flex items-center text-sm text-gray-700">
-                                <CheckCircle className="h-3 w-3 text-green-500 mr-2" />
-                                {submission}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600 mb-2">Current Challenges</div>
-                          <div className="space-y-1">
-                            {project.challenges.map((challenge, i) => (
-                              <div key={i} className="flex items-center text-sm text-gray-700">
-                                <AlertCircle className="h-3 w-3 text-orange-500 mr-2" />
-                                {challenge}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-2">Description</p>
+                        <p className="text-sm text-gray-700 line-clamp-2">{project.description}</p>
                       </div>
 
                       <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-200">
-                        <span>Last updated: {project.lastUpdate}</span>
+                        <span>Project ID: {project.id}</span>
                         <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
                           {project.category}
                         </span>
@@ -793,7 +766,7 @@ const TeacherDashboard = () => {
                           <div className="flex items-center text-gray-600 text-sm mb-3">
                             <Users className="h-4 w-4 mr-2" />
                             <span className="font-medium">Students:</span>
-                            <span className="ml-1">{project.students.join(', ')}</span>
+                            <span className="ml-1">{project.projectMembers?.map(m => m.userName).join(', ') || 'No students'}</span>
                             <span className="mx-3">•</span>
                             <Calendar className="h-4 w-4 mr-1" />
                             <span>{project.semester} {project.year}</span>
@@ -917,26 +890,86 @@ const TeacherDashboard = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">FYP Title</label>
-                <input type="text" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <input 
+                  type="text" 
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Enter project title"
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                  <option>Web Development</option>
-                  <option>Mobile Development</option>
-                  <option>Machine Learning</option>
-                  <option>IoT & Embedded</option>
-                  <option>Blockchain</option>
-                  <option>Data Science</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <select 
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option>Web Development</option>
+                    <option>Mobile Development</option>
+                    <option>Machine Learning</option>
+                    <option>IoT & Embedded</option>
+                    <option>Blockchain</option>
+                    <option>Data Science</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                  <select 
+                    value={formData.departmentId}
+                    onChange={(e) => setFormData({...formData, departmentId: parseInt(e.target.value)})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                  <input 
+                    type="number" 
+                    value={formData.year}
+                    onChange={(e) => setFormData({...formData, year: parseInt(e.target.value)})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
+                  <select 
+                    value={formData.semester}
+                    onChange={(e) => setFormData({...formData, semester: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option>Spring</option>
+                    <option>Fall</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea rows="3" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                <textarea 
+                  rows="3" 
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Briefly describe the project scope and goals"
+                ></textarea>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Required Skills</label>
-                <input type="text" placeholder="e.g., React, Python, Machine Learning" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
+                <select 
+                  value={formData.difficultyLevel}
+                  onChange={(e) => setFormData({...formData, difficultyLevel: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option>Beginner</option>
+                  <option>Intermediate</option>
+                  <option>Advanced</option>
+                </select>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
@@ -946,7 +979,11 @@ const TeacherDashboard = () => {
               >
                 Cancel
               </button>
-              <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button 
+                onClick={handleProposeFYP}
+                disabled={!formData.title || !formData.description}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Propose FYP
               </button>
             </div>
