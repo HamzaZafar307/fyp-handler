@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import projectService from '../../services/projectService';
 import { authService } from '../../services/authService';
+import { toast } from 'react-hot-toast';
 import { 
   Users, 
   BookOpen, 
@@ -40,6 +41,8 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -47,6 +50,11 @@ const AdminDashboard = () => {
   const [departments, setDepartments] = useState([]);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
+  
+  // User management state
+  const [allUsers, setAllUsers] = useState([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userLoading, setUserLoading] = useState(false);
 
   // Form states
   const [projectFormData, setProjectFormData] = useState({
@@ -63,7 +71,7 @@ const AdminDashboard = () => {
     firstName: '',
     lastName: '',
     email: '',
-    password: 'Password123!', // Default password for new users
+    password: '',
     role: 'Student',
     departmentId: ''
   });
@@ -114,6 +122,31 @@ const AdminDashboard = () => {
     fetchAdminData();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === 'users' && allUsers.length === 0) {
+      const fetchUsers = async () => {
+        try {
+          setUserLoading(true);
+          const users = await authService.getAllUsers();
+          setAllUsers(users || []);
+        } catch (err) {
+          console.error("Failed to fetch users", err);
+          toast.error("Could not load users.");
+        } finally {
+          setUserLoading(false);
+        }
+      };
+      fetchUsers();
+    }
+  }, [activeTab, allUsers.length]);
+
+  const filteredUsers = allUsers.filter(u => 
+    u.firstName?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    u.lastName?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    u.email?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    (u.studentId && u.studentId.toLowerCase().includes(userSearchTerm.toLowerCase()))
+  );
+
   const handleCreateProject = async () => {
     try {
       const payload = {
@@ -142,18 +175,68 @@ const AdminDashboard = () => {
       };
       await authService.adminAddUser(payload);
       setShowUserModal(false);
+      setUserFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        role: 'Student',
+        departmentId: departments[0]?.id || ''
+      });
       alert("User added successfully!");
       
-      // Update local stats mock
-      if (stats) {
-        setStats({
-          ...stats,
-          totalStudents: userFormData.role === 'Student' ? stats.totalStudents + 1 : stats.totalStudents,
-          totalTeachers: userFormData.role === 'Teacher' ? stats.totalTeachers + 1 : stats.totalTeachers
-        });
-      }
+      // Refresh user list
+      const users = await authService.getAllUsers();
+      setAllUsers(users || []);
     } catch (err) {
       alert("Failed to add user: " + err.message);
+    }
+  };
+
+  const handleEditClick = (u) => {
+    setEditingUser({
+      ...u,
+      departmentId: departments.find(d => d.name === u.department)?.id || departments[0]?.id || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async () => {
+    try {
+      const dept = departments.find(d => d.id === parseInt(editingUser.departmentId));
+      const payload = {
+        firstName: editingUser.firstName,
+        lastName: editingUser.lastName,
+        email: editingUser.email,
+        role: editingUser.role,
+        department: dept ? dept.name : editingUser.department,
+        studentId: editingUser.studentId || ''
+      };
+      
+      await authService.updateUser(editingUser.id, payload);
+      setShowEditModal(false);
+      toast.success("User updated successfully!");
+      
+      // Refresh user list
+      const users = await authService.getAllUsers();
+      setAllUsers(users || []);
+    } catch (err) {
+      toast.error("Failed to update user: " + err.message);
+    }
+  };
+
+  const handleSuspendUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to toggle this user's active status?")) return;
+    
+    try {
+      await authService.suspendUser(userId);
+      toast.success("User status updated!");
+      
+      // Refresh user list
+      const users = await authService.getAllUsers();
+      setAllUsers(users || []);
+    } catch (err) {
+      toast.error("Failed to update user status");
     }
   };
 
@@ -161,7 +244,7 @@ const AdminDashboard = () => {
     try {
       // In a real app, we'd have an approve endpoint
       // For now, we update status to InProgress
-      await projectService.updateProject(projectId, { status: 1 }); // 1 = InProgress
+      await projectService.updateProject(projectId, { status: projectService.Status.InProgress }); // Move to InProgress status
       setPendingApprovals(prev => prev.filter(p => p.id !== projectId));
       alert("Project approved!");
     } catch (err) {
@@ -551,8 +634,99 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {activeTab === 'users' && (
+              <div className="space-y-6">
+                <div className="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden">
+                  <div className="px-8 py-6 border-b border-gray-200">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+                      <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                        <input 
+                          type="text" 
+                          placeholder="Search by name, email or student ID..."
+                          value={userSearchTerm}
+                          onChange={(e) => setUserSearchTerm(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {userLoading ? (
+                    <div className="p-12 text-center text-gray-500">Loading users...</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID / Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredUsers.map((u, index) => (
+                            <tr key={u.id || index} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="h-10 w-10 flex-shrink-0 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                                    {u.firstName[0]}{u.lastName[0]}
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-bold text-gray-900">{u.firstName} {u.lastName}</div>
+                                    <div className="text-xs text-gray-500">{u.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  u.role === 'Admin' ? 'bg-purple-100 text-purple-800' :
+                                  u.role === 'Teacher' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {u.role}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {u.department || 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {u.studentId || u.email}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button 
+                                  onClick={() => handleEditClick(u)}
+                                  className="text-blue-600 hover:text-blue-900 mr-4 font-semibold"
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleSuspendUser(u.id)}
+                                  className="text-red-600 hover:text-red-900 font-semibold"
+                                >
+                                  Suspend
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {filteredUsers.length === 0 && (
+                        <div className="p-12 text-center text-gray-500 font-medium">
+                          No users found matching your search.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Other tabs can be implemented similarly with real data */}
-            {(activeTab === 'analytics' || activeTab === 'users' || activeTab === 'settings') && (
+            {(activeTab === 'analytics' || activeTab === 'settings') && (
               <div className="bg-white shadow-xl rounded-2xl border border-gray-100 p-12 text-center">
                 <Settings className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Interface Under Development</h3>
@@ -669,6 +843,16 @@ const AdminDashboard = () => {
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input 
+                  type="password" 
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Minimum 6 characters"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
@@ -705,10 +889,89 @@ const AdminDashboard = () => {
               </button>
               <button 
                 onClick={handleAddUser}
-                disabled={!userFormData.email || !userFormData.firstName}
+                disabled={!userFormData.email || !userFormData.firstName || userFormData.password.length < 6}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
               >
                 Add User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit User Modal */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 animate-slide-up">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Edit User</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                  <input 
+                    type="text" 
+                    value={editingUser.firstName}
+                    onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                  <input 
+                    type="text" 
+                    value={editingUser.lastName}
+                    onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input 
+                  type="email" 
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <select 
+                    value={editingUser.role}
+                    onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option>Student</option>
+                    <option>Teacher</option>
+                    <option>Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                  <select 
+                    value={editingUser.departmentId}
+                    onChange={(e) => setEditingUser({...editingUser, departmentId: parseInt(e.target.value)})}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleUpdateUser}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Save Changes
               </button>
             </div>
           </div>

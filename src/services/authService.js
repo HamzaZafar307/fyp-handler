@@ -227,15 +227,52 @@ export const authService = {
     return requiredRoles.includes(user?.role);
   },
 
-  /**
-   * Admin adds a new user without logging in as them
-   */
   adminAddUser: async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
       return response.data;
     } catch (error) {
       console.error('Error in adminAddUser:', error);
+      throw error;
+    }
+  },
+
+  getAllUsers: async () => {
+    try {
+      const response = await api.get('/auth/users');
+      return response.data.data;
+    } catch (error) {
+      console.error('Error in getAllUsers:', error);
+      throw error;
+    }
+  },
+
+  changePassword: async (passwordData) => {
+    try {
+      const response = await api.post('/auth/change-password', passwordData);
+      return response.data;
+    } catch (error) {
+      console.error('Error in changePassword:', error);
+      throw error;
+    }
+  },
+
+  updateUser: async (userId, userData) => {
+    try {
+      const response = await api.put(`/auth/users/${userId}`, userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error in updateUser:', error);
+      throw error;
+    }
+  },
+
+  suspendUser: async (userId) => {
+    try {
+      const response = await api.patch(`/auth/users/${userId}/suspend`);
+      return response.data;
+    } catch (error) {
+      console.error('Error in suspendUser:', error);
       throw error;
     }
   }

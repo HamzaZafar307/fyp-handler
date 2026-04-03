@@ -60,11 +60,6 @@ const Header = () => {
                   <span>Search</span>
                   <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></div>
                 </Link>
-                <Link to="/ai" className="flex items-center text-gray-700 hover:text-purple-600 transition-all duration-300 font-medium group relative">
-                  <Brain className="h-4 w-4 mr-1 transform group-hover:scale-110 transition-transform duration-300" />
-                  <span>AI Recommendations</span>
-                  <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full"></div>
-                </Link>
 
                 {/* Profile Dropdown */}
                 <div className="relative">
@@ -92,9 +87,17 @@ const Header = () => {
                         <div className="py-1">
                           <div className="px-4 py-2 text-sm text-gray-900 border-b">
                             <div className="font-medium">{user?.firstName} {user?.lastName}</div>
-                            <div className="text-gray-500">{user?.email}</div>
-                            <div className="text-xs text-blue-600">{user?.role}</div>
-                          </div>
+                             <div className="text-gray-500">{user?.email}</div>
+                             <div className="text-xs text-blue-600">{user?.role}</div>
+                           </div>
+                           <Link
+                             to="/profile"
+                             onClick={() => setIsProfileOpen(false)}
+                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                           >
+                             <User className="h-4 w-4 mr-2" />
+                             Profile Settings
+                           </Link>
                           {user?.role === USER_ROLES.TEACHER && (
                             <Link
                               to="/teacher/ranking-management"
@@ -193,14 +196,6 @@ const Header = () => {
                       <Search className="h-4 w-4 mr-2" />
                       Search
                     </Link>
-                    <Link
-                      to="/ai"
-                      className="flex items-center text-gray-700 hover:text-purple-600 transition duration-150"
-                      onClick={closeMenus}
-                    >
-                      <Brain className="h-4 w-4 mr-2" />
-                      AI Recommendations
-                    </Link>
                     {user?.role === USER_ROLES.TEACHER && (
                       <Link
                         to="/teacher/ranking-management"
@@ -217,6 +212,14 @@ const Header = () => {
                         <div className="text-gray-500">{user?.email}</div>
                         <div className="text-xs text-blue-600">{user?.role}</div>
                       </div>
+                      <Link
+                        to="/profile"
+                        className="flex items-center text-gray-700 hover:text-blue-600 transition duration-150 mb-2"
+                        onClick={closeMenus}
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        Profile Settings
+                      </Link>
                       <button
                         onClick={() => {
                           handleLogout();

@@ -14,9 +14,9 @@ import ProjectDetails from './components/ProjectDetails';
 import FYPRankings from './components/rankings/FYPRankings';
 import FYPSearch from './components/search/FYPSearch';
 import FYPRankingManagement from './components/teacher/FYPRankingManagement';
-import AIDashboard from './components/ai/AIDashboard';
-import ProjectRecommendations from './components/ai/ProjectRecommendations';
+import Profile from './components/profile/Profile';
 import DataTest from './components/test/DataTest';
+import { authService } from './services/authService';
 import { USER_ROLES } from './utils/constants';
 
 // Enhanced Home component with professional styling and animations
@@ -186,7 +186,14 @@ function App() {
             
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<EnhancedHome />} />
+              <Route 
+                path="/" 
+                element={
+                  authService.isAuthenticated() ? 
+                    <Navigate to="/dashboard" replace /> : 
+                    <EnhancedHome />
+                } 
+              />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               
@@ -256,31 +263,21 @@ function App() {
                 }
               />
 
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Layout><Profile /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Teacher FYP Management Route */}
               <Route
                 path="/teacher/ranking-management"
                 element={
                   <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]}>
                     <Layout><FYPRankingManagement /></Layout>
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* AI Dashboard and Recommendations Routes */}
-              <Route
-                path="/ai"
-                element={
-                  <ProtectedRoute>
-                    <Layout><AIDashboard /></Layout>
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/ai/recommendations"
-                element={
-                  <ProtectedRoute>
-                    <Layout><ProjectRecommendations numRecommendations={10} /></Layout>
                   </ProtectedRoute>
                 }
               />

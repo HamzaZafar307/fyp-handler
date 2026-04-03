@@ -38,7 +38,18 @@ const TeacherDashboard = () => {
   const [error, setError] = useState(null);
   const [projects, setProjects] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [dashboardStats, setDashboardStats] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    status: '',
+    progressDetails: '',
+    performanceScore: 0,
+    githubUrl: '',
+    documentUrl: '',
+    demoUrl: '',
+    features: '',
+    technologies: ''
+  });
   
   console.log('TeacherDashboard rendering, user:', user?.email, 'role:', user?.role);
 
@@ -66,7 +77,6 @@ const TeacherDashboard = () => {
         ]);
 
         setProjects(projectsData || []);
-        setDashboardStats(statsData);
         setDepartments(deptsData || []);
         
         if (deptsData && deptsData.length > 0) {
@@ -113,6 +123,49 @@ const TeacherDashboard = () => {
     } catch (err) {
       console.error("Failed to propose FYP", err);
       alert("Failed to propose FYP. Please check all fields.");
+    }
+  };
+
+  const handleEditProject = (project) => {
+    setEditingProject(project);
+    setEditFormData({
+      status: project.status,
+      progressDetails: project.progressDetails || '',
+      performanceScore: project.performanceScore || 0,
+      githubUrl: project.githubUrl || '',
+      documentUrl: project.documentUrl || '',
+      demoUrl: project.demoUrl || '',
+      features: project.features || '',
+      technologies: project.technologies || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateProject = async () => {
+    try {
+      // Find the integer status value from the string status name
+      let statusCode = projectService.Status.InProgress; // Default
+      if (editFormData.status === 'InProgress') statusCode = projectService.Status.InProgress;
+      else if (editFormData.status === 'Proposed') statusCode = projectService.Status.Proposed;
+      else if (editFormData.status === 'Approved') statusCode = projectService.Status.Approved;
+      else if (editFormData.status === 'Completed') statusCode = projectService.Status.Completed;
+
+      const payload = {
+        ...editFormData,
+        status: statusCode,
+        performanceScore: parseInt(editFormData.performanceScore)
+      };
+
+      await projectService.updateProject(editingProject.id, payload);
+      setShowEditModal(false);
+
+      // Refresh projects list
+      const updatedProjects = await projectService.getProjectsByTeacher(user.id);
+      setProjects(updatedProjects || []);
+      alert("Project updated successfully!");
+    } catch (err) {
+      console.error("Failed to update project", err);
+      alert("Failed to update project. Please try again.");
     }
   };
 
@@ -167,38 +220,6 @@ const TeacherDashboard = () => {
   const currentFYPs = projects.filter(p => p.status !== 'Completed');
   const completedFYPs = projects.filter(p => p.status === 'Completed');
 
-  const upcomingMeetings = [
-    {
-      id: 1,
-      title: 'Weekly Progress Review - Energy Management',
-      time: '10:00 AM',
-      date: 'Today',
-      students: ['Ahmed Ali', 'Sara Khan', 'Hassan Malik'],
-      type: 'progress',
-      duration: '1 hour',
-      agenda: ['Hardware integration update', 'Data visualization demo', 'Next week planning']
-    },
-    {
-      id: 2,
-      title: 'Fake News Detection - Model Review',
-      time: '2:00 PM',
-      date: 'Tomorrow',
-      students: ['Fatima Ahmed', 'Usman Sheikh'],
-      type: 'technical',
-      duration: '45 mins',
-      agenda: ['Model accuracy analysis', 'Dataset bias discussion', 'Performance optimization']
-    },
-    {
-      id: 3,
-      title: 'Blockchain Project - Industry Meeting',
-      time: '3:30 PM',
-      date: 'Jan 26',
-      students: ['Ali Hassan', 'Zara Noor', 'Omar Farooq'],
-      type: 'external',
-      duration: '2 hours',
-      agenda: ['Industry requirements review', 'Partnership discussion', 'Timeline adjustment']
-    }
-  ];
 
   const researchInsights = [
     {
@@ -321,8 +342,7 @@ const TeacherDashboard = () => {
                   { id: 'overview', name: 'Overview', icon: Activity },
                   { id: 'current', name: 'Current FYPs', icon: BookOpen },
                   { id: 'analytics', name: 'Analytics', icon: BarChart3 },
-                  { id: 'history', name: 'Completed FYPs', icon: CheckCircle },
-                  { id: 'meetings', name: 'Meetings', icon: Calendar }
+                  { id: 'history', name: 'Completed FYPs', icon: CheckCircle }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -454,41 +474,6 @@ const TeacherDashboard = () => {
 
                 {/* Sidebar */}
                 <div className="space-y-6">
-                  {/* Upcoming Meetings */}
-                  <div className="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-200">
-                      <h3 className="text-lg font-bold text-gray-900">Upcoming Meetings</h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="space-y-4">
-                        {upcomingMeetings.map((meeting) => (
-                          <div key={meeting.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                            <h4 className="font-semibold text-gray-900 mb-2 text-sm">{meeting.title}</h4>
-                            <div className="space-y-1 text-xs text-gray-600">
-                              <div className="flex items-center">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                {meeting.date} at {meeting.time}
-                              </div>
-                              <div className="flex items-center">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Duration: {meeting.duration}
-                              </div>
-                              <div className="flex items-center">
-                                <Users className="h-3 w-3 mr-1" />
-                                {meeting.students.join(', ')}
-                              </div>
-                            </div>
-                            <div className="mt-2">
-                              <p className="text-xs text-gray-500">Agenda: {meeting.agenda.slice(0, 2).join(', ')}</p>
-                            </div>
-                          </div>
-                        ))}
-                        <button className="w-full text-center py-3 text-blue-600 hover:text-blue-800 text-sm font-semibold hover:bg-blue-50 rounded-lg transition-colors">
-                          Schedule New Meeting →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Quick Actions */}
                   <div className="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden">
@@ -594,7 +579,10 @@ const TeacherDashboard = () => {
                           <button className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
                             <Eye className="h-5 w-5" />
                           </button>
-                          <button className="p-2 text-gray-400 hover:text-green-500 transition-colors">
+                          <button 
+                            onClick={() => handleEditProject(project)}
+                            className="p-2 text-gray-400 hover:text-green-500 transition-colors"
+                          >
                             <Edit className="h-5 w-5" />
                           </button>
                         </div>
@@ -629,6 +617,16 @@ const TeacherDashboard = () => {
                         <p className="text-sm text-gray-600 mb-2">Description</p>
                         <p className="text-sm text-gray-700 line-clamp-2">{project.description}</p>
                       </div>
+
+                      {project.progressDetails && (
+                        <div className="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100 animate-fade-in">
+                          <p className="text-sm font-semibold text-blue-900 mb-1 flex items-center">
+                            <TrendingUp className="h-4 w-4 mr-1 text-blue-600" />
+                            Latest Progress Details
+                          </p>
+                          <p className="text-sm text-blue-800">{project.progressDetails}</p>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-200">
                         <span>Project ID: {project.id}</span>
@@ -813,71 +811,6 @@ const TeacherDashboard = () => {
               </div>
             )}
 
-            {activeTab === 'meetings' && (
-              <div className="space-y-6">
-                <div className="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden">
-                  <div className="px-8 py-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-bold text-gray-900">Meeting Schedule</h2>
-                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Schedule Meeting
-                      </button>
-                    </div>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {upcomingMeetings.map((meeting) => (
-                      <div key={meeting.id} className="p-8 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                              {meeting.title}
-                            </h3>
-                            <div className="space-y-2 text-sm text-gray-600">
-                              <div className="flex items-center">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                <span>{meeting.date} at {meeting.time}</span>
-                              </div>
-                              <div className="flex items-center">
-                                <Clock className="h-4 w-4 mr-2" />
-                                <span>Duration: {meeting.duration}</span>
-                              </div>
-                              <div className="flex items-center">
-                                <Users className="h-4 w-4 mr-2" />
-                                <span>Attendees: {meeting.students.join(', ')}</span>
-                              </div>
-                            </div>
-                            <div className="mt-3">
-                              <div className="text-sm text-gray-600 mb-1">Agenda:</div>
-                              <ul className="text-sm text-gray-700 space-y-1">
-                                {meeting.agenda.map((item, i) => (
-                                  <li key={i} className="flex items-start">
-                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
-                                    {item}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                              meeting.type === 'progress' ? 'bg-blue-100 text-blue-800' :
-                              meeting.type === 'technical' ? 'bg-green-100 text-green-800' :
-                              'bg-purple-100 text-purple-800'
-                            }`}>
-                              {meeting.type}
-                            </span>
-                            <button className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
-                              <Edit className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -985,6 +918,151 @@ const TeacherDashboard = () => {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Propose FYP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditModal && editingProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 animate-slide-up shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Edit Supervised FYP</h3>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Plus className="h-6 w-6 transform rotate-45" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold text-gray-800 mb-1">{editingProject.title}</h4>
+              <p className="text-sm text-gray-500">Update project status and track progress</p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Project Status</label>
+                <select 
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                >
+                  <option value="Proposed">Proposed (Pending Approval)</option>
+                  <option value="InProgress">In Progress (Active)</option>
+                  <option value="Completed">Completed</option>
+                </select>
+                {editFormData.status === 'Proposed' && (
+                  <p className="mt-2 text-xs text-orange-600 flex items-center">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Admin approval is usually required to move from Proposed.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Current Progress Details</label>
+                <textarea 
+                  rows="4" 
+                  value={editFormData.progressDetails}
+                  onChange={(e) => setEditFormData({...editFormData, progressDetails: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  placeholder="Describe current achievements, milestones met, or challenges faced..."
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Performance Score (%)</label>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={editFormData.performanceScore}
+                    onChange={(e) => setEditFormData({...editFormData, performanceScore: e.target.value})}
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <span className="text-lg font-bold text-gray-900 w-12 text-right">{editFormData.performanceScore}%</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">GitHub URL</label>
+                  <input 
+                    type="url"
+                    value={editFormData.githubUrl}
+                    onChange={(e) => setEditFormData({...editFormData, githubUrl: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="https://github.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Demo URL</label>
+                  <input 
+                    type="url"
+                    value={editFormData.demoUrl}
+                    onChange={(e) => setEditFormData({...editFormData, demoUrl: e.target.value})}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="https://demo.com/..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Features (Separate by ;)</label>
+                <input 
+                  type="text"
+                  value={editFormData.features}
+                  onChange={(e) => setEditFormData({...editFormData, features: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="Feature 1; Feature 2; ..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Technologies (Separate by ;)</label>
+                <input 
+                  type="text"
+                  value={editFormData.technologies}
+                  onChange={(e) => setEditFormData({...editFormData, technologies: e.target.value})}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="React; Node.js; ..."
+                />
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Project Team</h5>
+                <div className="flex flex-wrap gap-2">
+                  {editingProject.projectMembers?.length > 0 ? (
+                    editingProject.projectMembers.map(member => (
+                      <div key={member.id} className="flex items-center bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+                        <Users className="h-3 w-3 text-blue-500 mr-2" />
+                        <span className="text-xs font-medium text-gray-700">{member.userName}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-500 italic">No students joined yet</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 mt-8">
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all font-semibold text-gray-700"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleUpdateProject}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                Save Changes
               </button>
             </div>
           </div>

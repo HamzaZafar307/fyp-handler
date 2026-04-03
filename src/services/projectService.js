@@ -1,6 +1,15 @@
 import api from './api';
 
 const projectService = {
+    // Status Constants aligned with Backend Enum
+    Status: {
+        Proposed: 1,
+        Approved: 2,
+        InProgress: 3,
+        Completed: 4,
+        Cancelled: 5
+    },
+
     /**
      * Get projects with filters (formerly searchProjects)
      * @param {Object} filters - { searchTerm, category, year, page, pageSize }
@@ -178,6 +187,34 @@ const projectService = {
         } catch (error) {
             console.error('Error fetching pending projects:', error);
             throw error;
+        }
+    },
+
+    /**
+     * Update an existing project
+     * @param {number} id 
+     * @param {Object} projectData 
+     */
+    updateProject: async (id, projectData) => {
+        try {
+            const response = await api.put(`/projects/${id}`, projectData);
+            return response.data;
+        } catch (error) {
+            console.error('Error updating project:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get all students
+     */
+    getStudents: async () => {
+        try {
+            const response = await api.get('/projects/students');
+            return response.data.data;
+        } catch (error) {
+            console.error('Error fetching students:', error);
+            return [];
         }
     }
 };

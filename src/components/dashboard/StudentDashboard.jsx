@@ -145,14 +145,6 @@ const StudentDashboard = () => {
       change: 'Recent searches',
       trend: 'neutral'
     },
-    {
-      name: 'Similar Ideas',
-      value: dashboardStats.noveltyChecksCount.toLocaleString(),
-      icon: TrendingUp,
-      color: 'bg-orange-500',
-      change: 'To your concept',
-      trend: 'neutral'
-    },
   ];
 
   const categories = [
@@ -474,23 +466,9 @@ const StudentDashboard = () => {
                           ))}
                         </div>
 
-                        <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                          <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                            <FileText className="h-4 w-4 mr-2" />
-                            View Document
-                          </button>
-                          <button className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-                            <Code className="h-4 w-4 mr-2" />
-                            Source Code
-                          </button>
-                          <button className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download ({fyp.downloads})
-                          </button>
-                          <div className="flex items-center text-sm text-gray-500 ml-auto">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {fyp.semester} {fyp.year}
-                          </div>
+                        <div className="flex items-center text-sm text-gray-500 pt-4 border-t border-gray-200">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          {fyp.semester} {fyp.year}
                         </div>
                       </div>
                     </div>
@@ -591,20 +569,6 @@ const StudentDashboard = () => {
                 </div>
                 <div className="p-6">
                   <div className="space-y-3">
-                    <button
-                      onClick={() => setShowNoveltyModal(true)}
-                      className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-blue-300 group"
-                    >
-                      <TrendingUp className="h-5 w-5 text-blue-500 mr-3 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm font-semibold text-gray-900">Check Idea Similarity</span>
-                    </button>
-                    <button 
-                      onClick={() => setShowSupervisorsModal(true)}
-                      className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-green-300 group"
-                    >
-                      <Users className="h-5 w-5 text-green-500 mr-3 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm font-semibold text-gray-900">Find Supervisors</span>
-                    </button>
                     <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-purple-300 group">
                       <Star className="h-5 w-5 text-purple-500 mr-3 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold text-gray-900">Top Rated FYPs</span>
