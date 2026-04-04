@@ -319,9 +319,8 @@ const ProjectDetails = () => {
           <div className="mb-8">
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
-                {[
+                                {[
                   { id: 'overview', name: 'Overview', icon: BookOpen },
-                  { id: 'details', name: 'Technical Details', icon: Code },
                   { id: 'timeline', name: 'Timeline', icon: Clock },
                   { id: 'team', name: 'Team', icon: Users },
                   { id: 'outcomes', name: 'Outcomes', icon: TrendingUp }
@@ -449,55 +448,7 @@ const ProjectDetails = () => {
                 </div>
               )}
 
-              {activeTab === 'details' && (
-                <div className="space-y-8">
-                  {/* Tech Stack */}
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Technology Stack</h2>
-                    <div className="flex flex-wrap gap-3">
-                      {project.technologies ? (
-                        project.technologies.split(';').map((tech, index) => (
-                          <span key={index} className="px-4 py-2 bg-gray-100 text-gray-800 rounded-xl text-sm font-medium border border-gray-200">
-                            {tech}
-                          </span>
-                        ))
-                      ) : (
-                        <p className="text-gray-500 italic">No technology stack specified yet.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Challenges & Solutions */}
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Challenges & Solutions</h2>
-                    <div className="space-y-6">
-                      {(project.challenges || []).map((challenge, index) => (
-                        <div key={index} className="border border-gray-200 rounded-xl p-6">
-                          <div className="flex items-start mb-3">
-                            <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 mr-3" />
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900 mb-2">Challenge {index + 1}</h4>
-                              <p className="text-gray-700 text-sm">{challenge}</p>
-                            </div>
-                          </div>
-                          {project.solutions?.[index] && (
-                            <div className="flex items-start mt-4 pl-8">
-                              <Lightbulb className="h-5 w-5 text-green-500 mt-0.5 mr-3" />
-                              <div className="flex-1">
-                                <h5 className="font-medium text-gray-900 mb-1">Solution</h5>
-                                <p className="text-gray-600 text-sm">{project.solutions[index]}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {(!project.challenges || project.challenges.length === 0) && (
-                        <p className="text-gray-500 italic">No challenges documented for this project.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+              
 
               {activeTab === 'timeline' && (
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">

@@ -405,10 +405,10 @@ const StudentDashboard = () => {
                             </div>
                             <div className="flex items-center text-gray-600 text-sm mb-3">
                               <Users className="h-4 w-4 mr-1" />
-                              <span className="font-medium">{fyp.students && fyp.students.length > 0 ? fyp.students.join(', ') : 'N/A'}</span>
+                                                            <span className="font-medium">{fyp.projectMembers && fyp.projectMembers.length > 0 ? fyp.projectMembers.map(m => m.userName).join(', ') : 'N/A'}</span>
                               <span className="mx-2">•</span>
                               <User className="h-4 w-4 mr-1" />
-                              <span>{fyp.supervisor || 'N/A'}</span>
+                              <span>{fyp.supervisorName || 'N/A'}</span>
                               <span className="mx-2">•</span>
                               <Building className="h-4 w-4 mr-1" />
                               <span>{fyp.department}</span>
@@ -568,7 +568,14 @@ const StudentDashboard = () => {
                   <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
                 </div>
                 <div className="p-6">
-                  <div className="space-y-3">
+                                    <div className="space-y-3">
+                    <button 
+                      onClick={() => setShowNoveltyModal(true)}
+                      className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-blue-300 group"
+                    >
+                      <Brain className="h-5 w-5 text-blue-500 mr-3 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm font-semibold text-gray-900">Check Idea Novelty</span>
+                    </button>
                     <button className="w-full flex items-center p-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:border-purple-300 group">
                       <Star className="h-5 w-5 text-purple-500 mr-3 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold text-gray-900">Top Rated FYPs</span>
