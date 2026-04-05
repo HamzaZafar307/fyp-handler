@@ -42,6 +42,8 @@ const AdminDashboard = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeptModal, setShowDeptModal] = useState(false);
+  const [isEditingDept, setIsEditingDept] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -74,6 +76,13 @@ const AdminDashboard = () => {
     password: '',
     role: 'Student',
     departmentId: ''
+  });
+
+  const [deptFormData, setDeptFormData] = useState({
+    id: null,
+    name: '',
+    code: '',
+    description: ''
   });
 
   useEffect(() => {
@@ -238,6 +247,52 @@ const AdminDashboard = () => {
     } catch (err) {
       toast.error("Failed to update user status");
     }
+  };
+
+  const handleCreateDepartment = async () => {
+    try {
+      if (isEditingDept) {
+        await projectService.updateDepartment(deptFormData.id, deptFormData);
+        toast.success("Department updated successfully!");
+      } else {
+        await projectService.createDepartment(deptFormData);
+        toast.success("Department created successfully!");
+      }
+      
+      setShowDeptModal(false);
+      
+      // Refresh department list
+      const depts = await projectService.getDepartments();
+      setDepartments(depts || []);
+    } catch (err) {
+      toast.error(`Failed to ${isEditingDept ? 'update' : 'create'} department: ${err.message}`);
+    }
+  };
+
+  const handleDeleteDepartment = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this department?")) return;
+    
+    try {
+      await projectService.deleteDepartment(id);
+      toast.success("Department deleted successfully!");
+      
+      // Refresh department list
+      const depts = await projectService.getDepartments();
+      setDepartments(depts || []);
+    } catch (err) {
+      toast.error("Failed to delete department");
+    }
+  };
+
+  const handleEditDeptClick = (dept) => {
+    setDeptFormData({
+      id: dept.id,
+      name: dept.name,
+      code: dept.code,
+      description: dept.description || ''
+    });
+    setIsEditingDept(true);
+    setShowDeptModal(true);
   };
 
   const handleApproveProject = async (projectId) => {
@@ -591,7 +646,14 @@ const AdminDashboard = () => {
                     <div className="flex items-center justify-between">
                       <h2 className="text-2xl font-bold text-gray-900">Department Overview</h2>
                       <div className="flex gap-3">
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                        <button 
+                          onClick={() => {
+                            setDeptFormData({ id: null, name: '', code: '', description: '' });
+                            setIsEditingDept(false);
+                            setShowDeptModal(true);
+                          }}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                        >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Department
                         </button>
@@ -621,10 +683,20 @@ const AdminDashboard = () => {
                                 Active
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button className="text-blue-600 hover:text-blue-900 mr-2"><Eye className="h-4 w-4" /></button>
-                              <button className="text-green-600 hover:text-green-900"><Edit className="h-4 w-4" /></button>
-                            </td>
+                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                               <button 
+                                 onClick={() => handleEditDeptClick(dept)}
+                                 className="text-green-600 hover:text-green-900 mr-2"
+                               >
+                                 <Edit className="h-4 w-4" />
+                               </button>
+                               <button 
+                                 onClick={() => handleDeleteDepartment(dept.id)}
+                                 className="text-red-600 hover:text-red-900"
+                               >
+                                 <AlertTriangle className="h-4 w-4" />
+                               </button>
+                             </td>
                           </tr>
                         ))}
                       </tbody>
@@ -972,6 +1044,63 @@ const AdminDashboard = () => {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+       {/* Department Modal */}
+      {showDeptModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 animate-slide-up">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">
+              {isEditingDept ? 'Edit Department' : 'Add New Department'}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Department Name</label>
+                <input 
+                  type="text" 
+                  value={deptFormData.name}
+                  onChange={(e) => setDeptFormData({...deptFormData, name: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                  placeholder="e.g. Computer Science"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Department Code</label>
+                <input 
+                  type="text" 
+                  value={deptFormData.code}
+                  onChange={(e) => setDeptFormData({...deptFormData, code: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                  placeholder="e.g. CS"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea 
+                  rows="3" 
+                  value={deptFormData.description}
+                  onChange={(e) => setDeptFormData({...deptFormData, description: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Optional description"
+                ></textarea>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => setShowDeptModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreateDepartment}
+                disabled={!deptFormData.name || !deptFormData.code}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-semibold"
+              >
+                {isEditingDept ? 'Save Changes' : 'Create Department'}
               </button>
             </div>
           </div>

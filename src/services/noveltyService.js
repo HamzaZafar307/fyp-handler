@@ -28,6 +28,20 @@ const noveltyService = {
             console.error('Error fetching analysis:', error);
             throw error;
         }
+    },
+
+    /**
+     * Chat with AI about the idea
+     * @param {Object} data - { title, abstract, originalityScore, history, message }
+     */
+    chatWithAi: async (data) => {
+        try {
+            const response = await api.post('/novelty/chat', data);
+            return response.data;
+        } catch (error) {
+            console.error('Error chatting with AI:', error);
+            throw error;
+        }
     }
 };
 

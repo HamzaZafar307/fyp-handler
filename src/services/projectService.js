@@ -86,13 +86,54 @@ const projectService = {
      */
     getDepartments: async () => {
         try {
-            console.log('Fetching departments from /Department...');
             const response = await api.get('/Department');
-            console.log('Departments API full response:', response.data);
             return response.data.data;
         } catch (error) {
             console.error('Error fetching departments:', error);
             return [];
+        }
+    },
+
+    /**
+     * Create a new department
+     * @param {Object} departmentData - { name, code, description }
+     */
+    createDepartment: async (departmentData) => {
+        try {
+            const response = await api.post('/Department', departmentData);
+            return response.data;
+        } catch (error) {
+            console.error('Error creating department:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update an existing department
+     * @param {number} id 
+     * @param {Object} departmentData 
+     */
+    updateDepartment: async (id, departmentData) => {
+        try {
+            const response = await api.put(`/Department/${id}`, departmentData);
+            return response.data;
+        } catch (error) {
+            console.error('Error updating department:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Delete a department
+     * @param {number} id 
+     */
+    deleteDepartment: async (id) => {
+        try {
+            const response = await api.delete(`/Department/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error deleting department:', error);
+            throw error;
         }
     },
 

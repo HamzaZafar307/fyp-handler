@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, AlertTriangle, CheckCircle, Search, Info, Github, ExternalLink, FileText } from 'lucide-react';
 import noveltyService from '../../services/noveltyService';
+import { Bot, Send } from 'lucide-react';
 
 const NoveltyCheckModal = ({ isOpen, onClose }) => {
     const [title, setTitle] = useState('');
@@ -9,7 +10,21 @@ const NoveltyCheckModal = ({ isOpen, onClose }) => {
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
 
+    // Chat States
+    const [chatLoading, setChatLoading] = useState(false);
+    const [currentMessage, setCurrentMessage] = useState('');
+    const [messages, setMessages] = useState([]);
+    const chatEndRef = React.useRef(null);
+
     const [loadingText, setLoadingText] = useState('Initializing AI Model...');
+
+    const scrollToBottom = () => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
     useEffect(() => {
         if (!loading) return;
@@ -41,6 +56,16 @@ const NoveltyCheckModal = ({ isOpen, onClose }) => {
             const response = await noveltyService.analyzeIdea({ title, abstract });
             if (response && response.data) {
                 setResult(response.data);
+                
+                // Set initial AI message based on analysis
+                const score = response.data.originalityScore;
+                const greeting = score > 80 
+                    ? `I've analyzed your idea and it looks **very unique** (${score}% originality)! What would you like to know about implementing this or exploring its methodology further?`
+                    : score > 50 
+                    ? `I found some moderate similarities (${score}% originality). I can help you find a unique "pivot" or niche for this project. Shall we discuss how to make it stand out?`
+                    : `I've detected high similarity with existing work (${score}% originality). Don't worry—most great ideas are built on existing ones. Let's discuss how we can modify the scope or tech stack to make it unique.`;
+                
+                setMessages([{ role: 'assistant', content: greeting }]);
             } else {
                 throw new Error('Invalid response from server');
             }
@@ -49,6 +74,38 @@ const NoveltyCheckModal = ({ isOpen, onClose }) => {
             setError(err.message || 'Failed to analyze idea. Please try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!currentMessage.trim() || chatLoading) return;
+
+        const userMsg = currentMessage;
+        setCurrentMessage('');
+        
+        // Add user message to UI immediately
+        const updatedHistory = [...messages, { role: 'user', content: userMsg }];
+        setMessages(updatedHistory);
+        setChatLoading(true);
+
+        try {
+            const response = await noveltyService.chatWithAi({
+                title,
+                abstract,
+                originalityScore: result.originalityScore,
+                history: messages,
+                message: userMsg
+            });
+
+            if (response && response.success) {
+                setMessages(response.data.updatedHistory);
+            }
+        } catch (err) {
+            console.error("Chat error:", err);
+            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to the brain right now. Please try again later." }]);
+        } finally {
+            setChatLoading(false);
         }
     };
 
@@ -203,25 +260,69 @@ const NoveltyCheckModal = ({ isOpen, onClose }) => {
                                             </div>
                                         )}
 
-                                        {/* Smart Suggestions */}
-                                        {result.suggestions && result.suggestions.length > 0 && (
-                                            <div className="mb-6">
-                                                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                                                    <Sparkles className="h-5 w-5 mr-2 text-purple-500" />
-                                                    AI Smart Suggestions
-                                                </h4>
-                                                <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
-                                                    <ul className="space-y-2">
-                                                        {result.suggestions.map((suggestion, idx) => (
-                                                            <li key={idx} className="flex items-start text-sm text-gray-700">
-                                                                <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
-                                                                {suggestion}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
+                                        {/* AI Chatbot Section */}
+                                        <div className="mb-6">
+                                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                <Sparkles className="h-5 w-5 mr-2 text-purple-500" />
+                                                Discuss Idea with AI Assistant
+                                            </h4>
+                                            
+                                            <div className="bg-purple-50 border border-purple-100 rounded-2xl overflow-hidden shadow-inner">
+                                                {/* Chat Messages */}
+                                                <div className="h-64 overflow-y-auto p-4 space-y-4">
+                                                    {messages.map((msg, idx) => (
+                                                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                            <div className={`flex max-w-[85%] items-start gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                                                <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border ${
+                                                                    msg.role === 'user' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-white border-purple-200 text-purple-600'
+                                                                }`}>
+                                                                    {msg.role === 'user' ? <Search className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                                                                </div>
+                                                                <div className={`p-3 rounded-2xl text-sm ${
+                                                                    msg.role === 'user' 
+                                                                        ? 'bg-blue-600 text-white rounded-tr-none shadow-md' 
+                                                                        : 'bg-white text-gray-800 border border-purple-100 rounded-tl-none shadow-sm'
+                                                                }`}>
+                                                                    {msg.content}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {chatLoading && (
+                                                        <div className="flex justify-start">
+                                                            <div className="bg-white border border-purple-100 p-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+                                                                <div className="flex gap-1">
+                                                                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                                                                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                                                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                                                </div>
+                                                                <span className="text-xs text-gray-500 font-medium">Assistant is thinking...</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    <div ref={chatEndRef} />
                                                 </div>
+
+                                                {/* Chat Input */}
+                                                <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-purple-100 flex gap-2">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Ask follow-up question..."
+                                                        className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                        value={currentMessage}
+                                                        onChange={(e) => setCurrentMessage(e.target.value)}
+                                                        disabled={chatLoading}
+                                                    />
+                                                    <button 
+                                                        type="submit"
+                                                        disabled={chatLoading || !currentMessage.trim()}
+                                                        className="bg-purple-600 text-white p-2 rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Send className="h-5 w-5" />
+                                                    </button>
+                                                </form>
                                             </div>
-                                        )}
+                                        </div>
 
                                         {/* Matches List */}
                                         <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
