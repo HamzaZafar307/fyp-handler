@@ -354,12 +354,6 @@ const AdminDashboard = () => {
 
   const quickActions = [
     { 
-      name: 'Create New Project', 
-      icon: Plus, 
-      color: 'bg-blue-500', 
-      action: () => setShowCreateModal(true) 
-    },
-    { 
       name: 'Add User', 
       icon: UserPlus, 
       color: 'bg-green-500', 
@@ -413,13 +407,13 @@ const AdminDashboard = () => {
                   <UserPlus className="h-5 w-5 mr-2" />
                   Add User
                 </button>
-                <button 
+                {/* <button 
                   onClick={() => setShowCreateModal(true)}
                   className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   New Project
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
